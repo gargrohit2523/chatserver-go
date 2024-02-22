@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/gargrohit2523/chatserver-go/trace"
 	"github.com/gorilla/websocket"
 )
 
@@ -16,6 +18,8 @@ type room struct {
 	leave chan *client
 	// clients hold all clients in the room
 	clients map[*client]bool
+	// tracer writes logs to the specified io.Writer
+	tracer trace.Tracer
 }
 
 // newRoom makes a new room.
@@ -25,6 +29,7 @@ func newRoom() *room {
 		join:    make(chan *client),
 		leave:   make(chan *client),
 		clients: make(map[*client]bool),
+		tracer:  trace.New(os.Stdout),
 	}
 }
 
@@ -34,14 +39,18 @@ func (r *room) run() {
 		case client := <-r.join:
 			//joining
 			r.clients[client] = true
+			r.tracer.Trace("New client joined")
 		case client := <-r.leave:
 			//leaving
 			delete(r.clients, client)
 			close(client.send)
+			r.tracer.Trace("client left")
 		case msg := <-r.forward:
 			//forward the message
+			r.tracer.Trace("Message received: ", string(msg))
 			for client := range r.clients {
 				client.send <- msg
+				r.tracer.Trace(" -- sent to client")
 			}
 		}
 	}
