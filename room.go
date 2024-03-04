@@ -7,11 +7,12 @@ import (
 
 	"github.com/gargrohit2523/chatserver-go/trace"
 	"github.com/gorilla/websocket"
+	"github.com/stretchr/objx"
 )
 
 type room struct {
 	// forward hold incoming messages that need to be forwarded to all clients in room
-	forward chan []byte
+	forward chan *message
 	// join is the channel for clients to join the room
 	join chan *client
 	// leave is the channel for clients to leave the room
@@ -25,7 +26,7 @@ type room struct {
 // newRoom makes a new room.
 func newRoom() *room {
 	return &room{
-		forward: make(chan []byte),
+		forward: make(chan *message),
 		join:    make(chan *client),
 		leave:   make(chan *client),
 		clients: make(map[*client]bool),
@@ -47,7 +48,7 @@ func (r *room) run() {
 			r.tracer.Trace("client left")
 		case msg := <-r.forward:
 			//forward the message
-			r.tracer.Trace("Message received: ", string(msg))
+			r.tracer.Trace("Message received: ", msg.Message)
 			for client := range r.clients {
 				client.send <- msg
 				r.tracer.Trace(" -- sent to client")
@@ -70,10 +71,16 @@ func (r *room) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Fatal("Error upgrading server to websocket: ", err)
 		return
 	}
+	authCookie, err := req.Cookie("auth")
+	if err != nil {
+		log.Fatal("Failed to get auth cookie:", err)
+		return
+	}
 	client := &client{
-		socket: socket,
-		send:   make(chan []byte, messageBufferSize),
-		room:   r,
+		socket:   socket,
+		send:     make(chan *message, messageBufferSize),
+		room:     r,
+		userData: objx.MustFromBase64(authCookie.Value),
 	}
 	r.join <- client
 
