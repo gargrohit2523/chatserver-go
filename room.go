@@ -21,16 +21,19 @@ type room struct {
 	clients map[*client]bool
 	// tracer writes logs to the specified io.Writer
 	tracer trace.Tracer
+	// avatar is how avatar information will be obtained.
+	avatar Avatar
 }
 
 // newRoom makes a new room.
-func newRoom() *room {
+func newRoom(avatar Avatar) *room {
 	return &room{
 		forward: make(chan *message),
 		join:    make(chan *client),
 		leave:   make(chan *client),
 		clients: make(map[*client]bool),
 		tracer:  trace.New(os.Stdout),
+		avatar:  avatar,
 	}
 }
 

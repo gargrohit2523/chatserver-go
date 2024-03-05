@@ -46,15 +46,25 @@ func main() {
 			"http://localhost:8080/auth/callback/facebook"),
 		github.New("key", "secret",
 			"http://localhost:8080/auth/callback/github"),
-		google.New("key", "secret",
+		google.New("", "",
 			"http://localhost:8080/auth/callback/google"),
 	)
 
-	r := newRoom()
+	r := newRoom(UseGravatar)
 	http.Handle("/chat", MustAuth(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
 	http.HandleFunc("/auth/", loginHandler)
 	http.Handle("/room", r)
+	http.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{
+			Name:   "auth",
+			Value:  "",
+			Path:   "/",
+			MaxAge: -1,
+		})
+		w.Header().Set("Location", "/chat")
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	})
 	// get the room going
 	go r.run()
 	// start the web server
