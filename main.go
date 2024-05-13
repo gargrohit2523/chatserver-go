@@ -46,7 +46,7 @@ func main() {
 	flag.Parse() // parse the flags
 
 	// setup gomniauth
-	gomniauth.SetSecurityKey("bitnirvana")
+	gomniauth.SetSecurityKey("")
 	gomniauth.WithProviders(
 		facebook.New("key", "secret",
 			"http://localhost:8080/auth/callback/facebook"),
